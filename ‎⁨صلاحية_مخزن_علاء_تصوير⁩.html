@@ -1,0 +1,29 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>صلاحية مخزن علاء</title>
+<style>
+body{margin:0;background:#f4f4f4;font-family:Arial;color:#222}.head{background:#111;color:#fff;padding:20px;text-align:center;font-size:24px;font-weight:bold}.wrap{max-width:520px;margin:auto;padding:16px}.card{background:#fff;border-radius:20px;padding:18px;margin-bottom:15px;box-shadow:0 3px 15px #0001}.camera{display:block;width:100%;padding:20px;border:0;border-radius:16px;background:#111;color:#fff;font-size:20px;font-weight:bold}.gallery{display:block;width:100%;padding:14px;border:0;border-radius:14px;background:#eee;margin-top:10px;font-size:17px}input{width:100%;padding:13px;border:1px solid #ddd;border-radius:10px;font-size:17px;box-sizing:border-box;margin-top:7px}label{display:block;margin-top:14px;font-weight:bold}#preview{display:none;width:100%;max-height:300px;object-fit:contain;border-radius:14px;margin-top:14px;background:#eee}.save{width:100%;padding:15px;margin-top:18px;border:0;border-radius:13px;background:#111;color:white;font-size:18px;font-weight:bold}.msg{margin-top:12px;padding:12px;border-radius:10px;background:#f0f0f0;text-align:center}
+.item{padding:12px;border:1px solid #eee;border-radius:12px;margin-top:9px}.ok{color:#18753b;font-weight:bold}.bad{color:#b00020;font-weight:bold}
+</style></head><body>
+<div class="head">📦 صلاحية مخزن علاء</div><div class="wrap">
+<div class="card"><h2 style="margin-top:0">صوّر المنتج 📸</h2>
+<button class="camera" onclick="document.getElementById('camera').click()">📸 تصوير المنتج</button>
+<input id="camera" type="file" accept="image/*" capture="environment" style="display:none">
+<button class="gallery" onclick="document.getElementById('gallery').click()">🖼️ اختيار من الصور</button>
+<input id="gallery" type="file" accept="image/*" style="display:none">
+<img id="preview"><div id="msg" class="msg">اكبس «تصوير المنتج» وابدأ.</div></div>
+<div class="card"><label>اسم المنتج</label><input id="name" placeholder="سيظهر بعد قراءة الصورة">
+<label>تاريخ الصلاحية</label><input id="expiry" type="date">
+<label>الكمية (اختياري)</label><input id="qty" type="number" min="0" placeholder="مثلاً 10">
+<button class="save" onclick="save()">💾 حفظ المنتج</button></div>
+<div class="card"><h2 style="margin-top:0">📋 الصلاحيات</h2><div id="list"></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+const cam=document.getElementById('camera'),gal=document.getElementById('gallery'),preview=document.getElementById('preview'),msg=document.getElementById('msg');
+let items=JSON.parse(localStorage.getItem('alaa_expiry')||'[]');
+cam.onchange=()=>read(cam.files[0]);gal.onchange=()=>read(gal.files[0]);
+async function read(file){if(!file)return;preview.src=URL.createObjectURL(file);preview.style.display='block';msg.textContent='⏳ جاري قراءة اسم المنتج والتاريخ...';
+try{let r=await Tesseract.recognize(file,'ara+eng');let t=r.data.text;document.getElementById('name').value=pickName(t);let d=pickDate(t);if(d)document.getElementById('expiry').value=d;msg.textContent=d?'✅ تمت قراءة التاريخ، راجعه واضغط حفظ.':'⚠️ لم يظهر تاريخ واضح، أدخله يدويًا ثم احفظ.'}catch(e){msg.textContent='⚠️ جرّب صورة أوضح.'}}
+function pickDate(t){t=t.replace(/[٠-٩]/g,x=>'٠١٢٣٤٥٦٧٨٩'.indexOf(x));let m=t.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](20\d{2})/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:''}
+function pickName(t){let a=t.split(/\n/).map(x=>x.trim()).filter(x=>x.length>2&&!/^(exp|best|use|date|expiry|تاريخ|الصلاحية|صالح|lot|batch)/i.test(x));return a.find(x=>!/\d{3,}/.test(x))||a[0]||''}
+function save(){let n=name.value.trim(),d=expiry.value;if(!n||!d){msg.textContent='اكتب الاسم والتاريخ أولاً.';return}items.unshift({n,d,q:qty.value});localStorage.setItem('alaa_expiry',JSON.stringify(items));name.value='';expiry.value='';qty.value='';msg.textContent='✅ تم حفظ المنتج';render()}
+function render(){list.innerHTML=items.length?items.map((x,i)=>{let days=Math.ceil((new Date(x.d)-new Date())/86400000);return `<div class="item"><b>${x.n}</b><br>📅 ${x.d}${x.q?'<br>📦 الكمية: '+x.q:''}<br><span class="${days<0?'bad':'ok'}">${days<0?'منتهي':'باقي '+days+' يوم'}</span></div>`}).join(''):'<span style="color:#777">لا توجد منتجات محفوظة.</span>'}render();
+</script></body></html>
