@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>مخزن علاء - حاسبة المبيعات والربح</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f4f6;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif}
+header{background:#111827;color:#fff;padding:16px;text-align:center;position:sticky;top:0;z-index:3}header b{font-size:20px}header small{display:block;opacity:.7;margin-top:3px}
+main{max-width:520px;margin:auto;padding:12px}.card{background:#fff;border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 2px 10px #0001}
+h2{font-size:17px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}label{font-size:12px;color:#6b7280;display:block;margin-bottom:5px}
+input,select,button{width:100%;height:47px;border-radius:12px;border:1px solid #ddd;background:#fff;font-size:16px;padding:0 10px}button{border:0;background:#2563eb;color:#fff;font-weight:700}
+.calc{background:#111827;border-radius:20px;padding:14px;color:white}.display{background:#1f2937;border-radius:15px;padding:12px;margin-bottom:9px;min-height:80px}.expr{font-size:15px;color:#9ca3af;direction:ltr;text-align:left;min-height:22px}.total{font-size:30px;font-weight:700;direction:ltr;text-align:left;margin-top:5px}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.keys button{height:57px;background:#374151;color:#fff;font-size:20px}.keys .op{background:#4b5563}.keys .money{background:#166534;font-size:16px}.keys .eq{background:#2563eb}.keys .wide{grid-column:span 2}
+.products{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.prod{background:#eef2ff;color:#111827;text-align:right;height:auto;min-height:68px;padding:9px}.prod b{display:block}.prod small{color:#6b7280}.prod span{display:block;color:#15803d;font-weight:700;margin-top:3px}
+.row{display:flex;gap:8px}.row>*{flex:1}.danger{background:#dc2626}.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{background:#f3f4f6;padding:10px;border-radius:12px;text-align:center}.stat b{display:block;font-size:18px;margin-top:4px}.empty{text-align:center;color:#777;padding:10px}
+</style></head>
+<body>
+<header><b>مخزن علاء</b><small>حاسبة المبيعات والربح</small></header>
+<main>
+
+<section class="card">
+<h2>➕ إضافة صنف</h2>
+<div class="grid">
+<div><label>اسم الصنف</label><input id="name" placeholder="مثلاً رز"></div>
+<div><label>رأس المال</label><input id="cost" type="number" inputmode="decimal" placeholder="3"></div>
+<div><label>سعر المبيع</label><input id="sell" type="number" inputmode="decimal" placeholder="3.45"></div>
+<div><label>العملة</label><select id="currency"><option>$ دولار</option><option>ل.س</option></select></div>
+</div><br><button onclick="addProduct()">حفظ الصنف</button>
+</section>
+
+<section class="card">
+<h2>🛒 أصنافك — اضغط على الصنف ليُضاف للحاسبة</h2>
+<div id="products" class="products"><div class="empty">أضف أول صنف فوق</div></div>
+</section>
+
+<section class="card">
+<h2>🧮 الحاسبة</h2>
+<div class="calc">
+<div class="display"><div id="expr" class="expr">جاهز</div><div id="total" class="total">0</div></div>
+<div class="keys">
+<button class="op" onclick="clearCalc()">AC</button><button class="op" onclick="back()">⌫</button><button class="op" onclick="add('÷')">÷</button><button class="op" onclick="add('×')">×</button>
+<button onclick="add('7')">7</button><button onclick="add('8')">8</button><button onclick="add('9')">9</button><button class="op" onclick="add('-')">−</button>
+<button onclick="add('4')">4</button><button onclick="add('5')">5</button><button onclick="add('6')">6</button><button class="op" onclick="add('+')">+</button>
+<button onclick="add('1')">1</button><button onclick="add('2')">2</button><button onclick="add('3')">3</button><button class="eq" onclick="equal()">=</button>
+<button class="wide" onclick="add('0')">0</button><button onclick="add('.')">.</button>
+<button class="money" onclick="setCurrency('$')">$</button><button class="money" onclick="setCurrency('ل.س')">ل.س</button><button class="money" onclick="saveSale()">💾 حفظ</button>
+</div></div>
+</section>
+
+<section class="card">
+<h2>📊 المحفوظ</h2>
+<div class="stats"><div class="stat">المبيعات $<b id="salesUSD">0</b></div><div class="stat">الربح $<b id="profitUSD">0</b></div><div class="stat">المبيعات ل.س<b id="salesSYP">0</b></div><div class="stat">الربح ل.س<b id="profitSYP">0</b></div></div>
+</section>
+
+<section class="card"><div class="row"><button class="danger" onclick="resetToday()">مسح مبيعات اليوم</button></div></section>
+</main>
+<script>
+const KEY='alaa_shop_calc_v2';let db=JSON.parse(localStorage.getItem(KEY)||'{"products":[],"sales":[]}');let expr='',currency='';
+function $(x){return document.getElementById(x)}function fmt(n){return Number(n).toLocaleString('en-US',{maximumFractionDigits:3})}
+function persist(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function addProduct(){let name=$('name').value.trim(),cost=+$('cost').value,sell=+$('sell').value,cur=$('currency').value.split(' ')[0];if(!name||cost<=0||sell<=0)return alert('أدخل اسم الصنف ورأس المال وسعر المبيع');db.products.push({id:Date.now(),name,cost,sell,cur});$('name').value='';$('cost').value='';$('sell').value='';persist()}
+function addProductToCalc(id){let p=db.products.find(x=>x.id===id);if(!p)return;if(currency&&currency!==p.cur)return alert('هذه العملية فيها عملة '+currency+'، ابدأ عملية جديدة لإضافة '+p.cur);currency=p.cur;expr+=(expr?' + ':'')+p.sell;show()}
+function add(x){expr+=x;show()}function back(){expr=expr.slice(0,-1);show()}function clearCalc(){expr='';currency='';show()}
+function calc(){try{let e=expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/[^0-9+*/(). -]/g,'');if(!e)return null;let v=Function('"use strict";return ('+e+')')();return Number.isFinite(v)?v:null}catch{return null}}
+function equal(){let v=calc();if(v!==null){expr=String(v);show()}}function setCurrency(c){let v=calc();if(v===null)return alert('أدخل المبلغ أولاً');if(currency&&currency!==c)return alert('لا يمكن خلط الدولار والسوري بنفس العملية');currency=c;expr=String(v);show()}
+function saveSale(){let v=calc();if(v===null||!currency)return alert('احسب المبلغ ثم اختر $ أو ل.س ثم اضغط حفظ');let profit=0;let parts=expr.replace(/×/g,'*').replace(/÷/g,'/').split('+');for(let part of parts){let n=parseFloat(part);let p=db.products.find(x=>x.cur===currency&&Math.abs(x.sell-n)<.000001);if(p)profit+=n-p.cost}db.sales.push({date:new Date().toISOString().slice(0,10),cur:currency,sales:v,profit});persist();expr='';currency='';show()}
+function show(){$('expr').textContent=expr||'جاهز';$('total').textContent=expr?expr+(currency?' '+currency:''):'0'}
+function render(){let el=$('products');el.innerHTML=db.products.length?db.products.map(p=>`<button class="prod" onclick="addProductToCalc(${p.id})"><b>${p.name}</b><small>رأس المال: ${fmt(p.cost)} ${p.cur}</small><span>مبيع: ${fmt(p.sell)} ${p.cur}</span></button>`).join(''):'<div class="empty">أضف أول صنف فوق</div>';let s=db.sales.filter(x=>x.date===new Date().toISOString().slice(0,10)),u=s.filter(x=>x.cur==='$'),y=s.filter(x=>x.cur==='ل.س');$('salesUSD').textContent=fmt(u.reduce((a,x)=>a+x.sales,0));$('profitUSD').textContent=fmt(u.reduce((a,x)=>a+x.profit,0));$('salesSYP').textContent=fmt(y.reduce((a,x)=>a+x.sales,0));$('profitSYP').textContent=fmt(y.reduce((a,x)=>a+x.profit,0))}
+function resetToday(){if(confirm('مسح مبيعات اليوم؟')){let d=new Date().toISOString().slice(0,10);db.sales=db.sales.filter(x=>x.date!==d);persist()}}render();show();
+</script></body></html>
